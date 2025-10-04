@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # Application Service
+  java-security-demo:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DATABASE_URL=jdbc:postgresql://postgres:5432/javasecurity
+      - DATABASE_USERNAME=postgres
+      - DATABASE_PASSWORD=password
+      - JWT_SECRET=your-super-secure-jwt-secret-key-here-at-least-256-bits-long-change-this-in-production
+      - DATABASE_DRIVER=org.postgresql.Driver
+      - DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
+      - DDL_AUTO=update
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=javasecurity
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
